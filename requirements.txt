@@ -1,0 +1,13 @@
+# requirements.txt for Bilibili and Xiaohongshu Scraping
+
+# requests: For making HTTP requests to fetch data from the APIs
+requests
+
+# playwright: For automating browser interactions and scraping JavaScript-rendered content
+playwright
+
+# selenium: For controlling web browsers through programs and automating tasks
+selenium
+
+# aiohttp: For making asynchronous HTTP requests, improving efficiency for I/O-bound operations
+aiohttp
