@@ -1,0 +1,4 @@
+# AI 大模型资讯爬虫依赖
+requests>=2.31.0
+feedparser>=6.0.10
+yagmail>=0.15.293
