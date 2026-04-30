@@ -1,72 +1,35 @@
-name: Daily AI News Report
+name: Daily AI News Bot
 
+# 触发条件：支持手动点击按钮运行
 on:
-  schedule:
-    # 每天早上 8 点 UTC 运行 (北京时间下午 4 点)
-    # 如需调整时区，请修改 cron 表达式
-    - cron: '0 8 * * *'
-  
-  # 允许手动触发
   workflow_dispatch:
 
 jobs:
-  fetch-and-report:
+  build-and-send:
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write
-      
+
     steps:
+      # 1. 拉取仓库最新代码 (已升级 v4)
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
+      # 2. 配置 Python 环境 (已升级 v5)
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-      
+          python-version: '3.10'
+
+      # 3. 安装必要的依赖包
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install requests feedparser yagmail
+          python -m pip install --upgrade pip
+          pip install requests yagmail
 
-      - name: Fetch AI news and generate report
-        run: |
-          python3 scripts/fetch_ai_models_news.py
-
-      - name: Send daily report email
+      # 4. 运行发送邮件的 Python 脚本
+      - name: Run email script
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: |
-          python3 scripts/send_report_email.py
-            EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-            EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          run: |
-            python scripts/send_report_email.py
-      
-      - name: Configure Git
-        run: |
-          git config --local user.email "claw-agent@github.local"
-          git config --local user.name "Claw AI Agent"
-      
-      - name: Check for changes and commit
-        run: |
-          if git diff --quiet; then
-            echo "No changes to commit"
-          else
-            git add reports/
-            git commit -m "🤖 chore: auto-generate daily AI news report"
-            git push
-            echo "✅ Daily report committed and pushed!"
-          fi
-      
-      - name: Upload report as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: daily-ai-reports
-          path: reports/
-          retention-days: 30
+          python send_email.py
