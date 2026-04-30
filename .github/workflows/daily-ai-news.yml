@@ -28,12 +28,12 @@ jobs:
       
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install requests feedparser yagmail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install requests feedparser yagmail
 
       - name: Fetch AI news and generate report
         run: |
-          python scripts/fetch_ai_models_news.py
+          python3 scripts/fetch_ai_models_news.py
 
       - name: Send daily report email
         env:
@@ -41,7 +41,7 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: |
-          python scripts/send_report_email.py
+          python3 scripts/send_report_email.py
             EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
             EMAIL_TO: ${{ secrets.EMAIL_TO }}
           run: |
