@@ -3,47 +3,34 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-def send_test_email():
-    # 1. 安全读取 GitHub Secrets 传进来的环境变量
+def send_daily_report():
     sender_email = os.environ.get('EMAIL_USER')
     sender_password = os.environ.get('EMAIL_PASS')
     receiver_email = os.environ.get('EMAIL_TO')
 
-    if not all([sender_email, sender_password, receiver_email]):
-        print("❌ 错误：环境变量未正确加载，请检查 GitHub Secrets 配置！")
-        return
+    # 读取生成的报告
+    if os.path.exists("report.txt"):
+        with open("report.txt", "r", encoding="utf-8") as f:
+            email_body = f.read()
+    else:
+        email_body = "今天没有抓取到新的 AI 资讯。"
 
-    # 2. 构建邮件内容
-    subject = "🎉 Claw 智能体汇报：自动化工作流测试成功！"
-    body = """
-    你好！
-    
-    当你收到这封邮件时，说明你的 GitHub Actions 工作流已经完美跑通了！
-    Python 脚本成功读取了 Secrets，并完成了自动发送。
-    
-    接下来，你可以把真实的网络抓取数据填入这里了。
-    
-    你的专属 AI 助手
-    """
-    
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+    msg['Subject'] = "📅 今日 AI 大模型情报汇总"
+    msg.attach(MIMEText(email_body, 'plain', 'utf-8'))
 
-    # 3. 发送邮件 (这里以 Gmail 为例，SMTP 服务器为 smtp.gmail.com，端口 465)
-    # 如果你是 QQ 邮箱，请将 smtp.gmail.com 改为 smtp.qq.com
     try:
-        print("正在连接 SMTP 服务器...")
-        # 使用 SSL 加密连接
+        # 如果你用的是 Gmail，保持 smtp.gmail.com 465
+        # 如果是 QQ 邮箱，请改为 smtp.qq.com
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(sender_email, sender_password)
         server.send_message(msg)
         server.quit()
-        print("✅ 邮件发送成功！请查收收件箱。")
+        print("✅ 每日早报已发送成功！")
     except Exception as e:
-        print(f"❌ 邮件发送失败，错误详情: {e}")
+        print(f"❌ 发送失败: {e}")
 
 if __name__ == "__main__":
-    send_test_email()
+    send_daily_report()
