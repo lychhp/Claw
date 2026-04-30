@@ -29,10 +29,6 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           python scripts/fetch_ai_news.py
-        run: |
-          # 运行抓取脚本，并将结果存入 report.txt
-          python scripts/fetch_ai_news.py
-
       - name: Send Email
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
