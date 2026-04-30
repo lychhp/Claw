@@ -14,8 +14,10 @@ def fetch_and_summarize():
     for source, url in feeds.items():
         print(f"正在抓取: {source}...")
         feed = feedparser.parse(url)
-        for entry in feed.entries[:3]: # 每个源取前3条，避免内容太长超出模型限制
-            raw_text += f"标题: {entry.title}\n摘要: {entry.summary[:200]}...\n链接: {entry.link}\n\n"
+        for entry in feed.entries[:3]: 
+            # 安全获取摘要：先找 summary，找不到找 description，再找不到就默认'无摘要'
+            summary_text = entry.get('summary', entry.get('description', '无摘要'))
+            raw_text += f"标题: {entry.title}\n摘要: {summary_text[:200]}...\n链接: {entry.link}\n\n"
 
     # 2. 调用 DeepSeek 进行智能总结
     api_key = os.environ.get('DEEPSEEK_API_KEY')
