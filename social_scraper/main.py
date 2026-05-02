@@ -3,6 +3,7 @@ from playwright.async_api import async_playwright
 import os
 import requests
 import json
+import yagmail  # 新增：用于发邮件的武器库
 
 async def scrape_and_analyze(keyword):
     async with async_playwright() as p:
@@ -45,7 +46,6 @@ async def scrape_and_analyze(keyword):
         
         if not api_key:
             print("⚠️ 警告：当前终端找不到你的 DEEPSEEK_API_KEY！")
-            print("原始数据如下：\n", scraped_data)
             return
 
         api_url = "https://api.deepseek.com/v1/chat/completions"
@@ -54,15 +54,14 @@ async def scrape_and_analyze(keyword):
             "Authorization": f"Bearer {api_key}"
         }
         
-        # 这里就是你作为 AI 调教者的“咒语”（Prompt）
         prompt = f"""
         你是一个资深的 AI 行业观察员。我刚刚从 B 站抓取了关于“{keyword}”的最热排名前 5 的爆款视频。
         请根据这些视频的标题，帮我写一份《B站 AI 趋势洞察简报》。
         
         要求：
         1. 语气专业、犀利，直接切中要害。
-        2. 总结目前大众最关注的核心痛点是什么？（比如是搞钱变现、工具教程、还是底层技术？）
-        3. 排版美观，并在最后附上这 5 个视频的完整清单及链接，方便我查阅。
+        2. 总结目前大众最关注的核心痛点是什么？
+        3. 排版美观，并在最后附上这 5 个视频的完整清单及链接。
         
         原始抓取数据如下：
         {scraped_data}
@@ -78,20 +77,26 @@ async def scrape_and_analyze(keyword):
             response = requests.post(api_url, headers=headers, data=json.dumps(payload))
             summary = response.json()['choices'][0]['message']['content']
             
-            # 打印惊艳结果
-            print("\n" + "✨ "*20)
-            print("🎉 深度洞察报告生成完毕：\n")
-            print(summary)
-            print("✨ "*20 + "\n")
+            # --- 3. 自动发信阶段 ---
+            print("📧 [第三阶段] 正在打包报告发送至您的邮箱...")
+            email_user = os.environ.get('EMAIL_USER')
+            email_pass = os.environ.get('EMAIL_PASS')
+            email_to = os.environ.get('EMAIL_TO')
             
-            # 保存到本地文件，方便后续发邮件
-            with open("social_scraper/bilibili_insight.txt", "w", encoding="utf-8") as f:
-                f.write(summary)
-            print("✅ 报告已自动保存为 bilibili_insight.txt")
+            if email_user and email_pass and email_to:
+                # 💡 注意：如果你用的是163邮箱，把 smtp.qq.com 换成 smtp.163.com
+                yag = yagmail.SMTP(user=email_user, password=email_pass, host='smtp.qq.com')
+                yag.send(
+                    to=email_to,
+                    subject=f"🔥 专属定制：B站【{keyword}】趋势洞察简报",
+                    contents=[summary]
+                )
+                print("✅ 邮件发送成功！目标已达成！")
+            else:
+                print("⚠️ 缺少邮箱秘钥（云端会自动读取，本地测试若没配则跳过）。")
 
         except Exception as e:
-            print(f"❌ DeepSeek 调用失败，错误信息: {e}")
+            print(f"❌ DeepSeek 调用或发信失败，错误信息: {e}")
 
 if __name__ == "__main__":
-    # 启动异步抓取任务
     asyncio.run(scrape_and_analyze("AI大模型"))
