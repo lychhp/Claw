@@ -1,38 +1,52 @@
 import os
-import sys
 import requests
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
 
-# 将根目录加入路径，方便导入 send_email.py
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from send_email import send_notification # 假设你的 send_email.py 里有这个函数
-
+# 1. 抓取逻辑
 def fetch_badminton_streams():
     m3u_url = "https://iptv-org.github.io/iptv/categories/sports.m3u"
     try:
         response = requests.get(m3u_url, timeout=15)
-        # 增加判断，确保 response 有内容
-        if not response.text:
-            return None
-            
         lines = response.text.split('\n')
         matches = []
         for i in range(len(lines)):
             if "Badminton" in lines[i] or "BWF" in lines[i]:
                 if i + 1 < len(lines) and lines[i+1].startswith("http"):
                     matches.append(f"{lines[i]}\nLink: {lines[i+1]}")
-        
         return "\n\n".join(matches) if matches else None
     except Exception as e:
         print(f"抓取异常: {e}")
         return None
 
+# 2. 发送逻辑 (完全参照你的 main.py 图片)
+def send_notification(content):
+    sender = os.environ.get('GMAIL_USER')
+    password = os.environ.get('GMAIL_PASS')
+    receiver = os.environ.get('RECEIVER_EMAIL')
+
+    # 按照你图片里的逻辑，把标题直接写在邮件里
+    message = MIMEText(content, 'plain', 'utf-8')
+    message['From'] = sender
+    message['To'] = receiver
+    message['Subject'] = Header("🏸 羽毛球直播源自动提醒", 'utf-8')
+
+    try:
+        smtp = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        smtp.login(sender, password)
+        smtp.sendmail(sender, [receiver], message.as_string())
+        smtp.quit()
+        print("邮件推送成功")
+    except Exception as e:
+        print(f"邮件推送失败: {e}")
+
+# 3. 执行入口
 if __name__ == "__main__":
-    content = fetch_badminton_streams()
+    print("正在搜索羽毛球直播源...")
+    live_content = fetch_badminton_streams()
     
-    if content:
-        print("发现直播源，准备发送邮件...")
-        # 核心修改：只传一个参数，内容里带上标题
-        full_body = f"🏸 羽毛球直播源更新:\n\n{content}"
-        send_notification(full_body) 
+    if live_content:
+        send_notification(live_content)
     else:
-        print("今日暂无直播源，跳过发送。")
+        print("当前没有搜集到直播源。")
