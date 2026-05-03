@@ -1,0 +1,35 @@
+name: Badminton Live Alert
+
+on:
+  schedule:
+    # 每天北京时间 10:00 - 23:00，每 2 小时检查一次
+    - cron: '0 2-15/2 * * *'
+  workflow_dispatch: # 方便你随时手动点击运行
+
+jobs:
+  check-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch and Notify
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+        run: |
+          # 运行抓取脚本并将结果存入临时变量
+          RESULT=$(python scripts/badminton_monitor.py)
+          
+          # 调用你现有的发送邮件脚本（假设它接受环境变量或内容）
+          # 如果你的 send_email.py 需要内容作为输入，可以这样传：
+          python send_email.py --subject "🏸 羽毛球直播源更新" --body "$RESULT"
