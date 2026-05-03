@@ -31,9 +31,8 @@ if __name__ == "__main__":
     
     if content:
         print("发现直播源，准备发送邮件...")
-        # 直接调用你现有的发送逻辑
-        # 注意：这里需要匹配你 send_email.py 里的函数名和参数
-        # 假设你的函数签名是 send_notification(subject, body)
-        send_notification("🏸 羽毛球直播源更新", content)
+        # 核心修改：只传一个参数，内容里带上标题
+        full_body = f"🏸 羽毛球直播源更新:\n\n{content}"
+        send_notification(full_body) 
     else:
         print("今日暂无直播源，跳过发送。")
