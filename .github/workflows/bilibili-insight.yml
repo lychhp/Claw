@@ -2,8 +2,8 @@ name: Bilibili AI Insight Bot
 
 on:
   schedule:
-    # 设定在每天北京时间早上 9:15 运行 (错峰出行)
-    - cron: '15 1 * * *'
+    # 设定在每天北京时间早上 9:11 运行 (错峰出行)
+    - cron: '11 1 * * *'
   workflow_dispatch: # 保留手动触发按钮，方便随时验收
 
 jobs:
