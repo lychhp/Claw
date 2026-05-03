@@ -85,7 +85,7 @@ async def scrape_and_analyze(keyword):
             
             if email_user and email_pass and email_to:
                 # 💡 注意：如果你用的是163邮箱，把 smtp.qq.com 换成 smtp.163.com
-                yag = yagmail.SMTP(user=email_user, password=email_pass, host='smtp.qq.com')
+                yag = yagmail.SMTP(user=email_user, password=email_pass, host='smtp.gmail.com', port=465)
                 yag.send(
                     to=email_to,
                     subject=f"🔥 专属定制：B站【{keyword}】趋势洞察简报",
