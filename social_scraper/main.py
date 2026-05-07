@@ -7,75 +7,71 @@ import yagmail
 
 async def scrape_and_analyze(keyword):
     async with async_playwright() as p:
-        # --- 1. 抓取阶段 (增强版) ---
+        # --- 1. 抓取阶段 (YouTube 版) ---
         browser = await p.chromium.launch(headless=True)
+        # 将语言设置为中文(或英文)，以便 YouTube 返回对应语言的界面和时间格式
         context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            locale="zh-CN" 
         )
         page = await context.new_page()
 
-        print(f"🚀 [第一阶段] 正在全方位扫射 B 站【{keyword}】的爆款数据...")
-        await page.goto(f"https://search.bilibili.com/all?keyword={keyword}")
+        print(f"🚀 [第一阶段] 正在潜入 YouTube 抓取【{keyword}】的全球爆款...")
+        # 1. 网址改为 YouTube 的搜索链接
+        await page.goto(f"https://www.youtube.com/results?search_query={keyword}")
         
         try:
-            # 增加等待时间，确保统计数据加载出来
-            await page.wait_for_selector(".bili-video-card", timeout=15000)
-            await asyncio.sleep(2) # 额外缓冲，等待数字跳动完成
+            # 2. 定位器改为 YouTube 的视频卡片标签：ytd-video-renderer
+            await page.wait_for_selector("ytd-video-renderer", timeout=15000)
+            await asyncio.sleep(2) # 额外缓冲，确保数据加载完成
         except Exception:
-            print("❌ 数据加载超时。")
+            print("❌ 数据加载超时，可能需要处理 YouTube 弹窗。")
             await browser.close()
             return
 
-        video_cards = await page.locator(".bili-video-card").all()
+        video_cards = await page.locator("ytd-video-renderer").all()
         
         scraped_data = ""
         for i, card in enumerate(video_cards[:5]):
-            # 1. 提取标题
-            title_elem = card.locator("h3")
+            # 3. 提取 YouTube 标题和链接 (#video-title)
+            title_elem = card.locator("#video-title")
             title = await title_elem.inner_text() if await title_elem.count() > 0 else "未知标题"
             
-            # 2. 提取链接
-            link_elem = card.locator("a").first
-            link = await link_elem.get_attribute("href") if await link_elem.count() > 0 else ""
-            if link and link.startswith("//"): link = "https:" + link
+            link = await title_elem.get_attribute("href") if await title_elem.count() > 0 else ""
+            # YouTube 提取的链接通常是 /watch?v=... ，需要补全前缀
+            if link and link.startswith("/"): link = "https://www.youtube.com" + link
             
-            # 3. 提取数据指标 (播放量、弹幕、日期)
-            # B站搜索页通常直接显示：播放量、弹幕量、上传日期
-            stats_items = await card.locator(".bili-video-card__stats--item").all()
-            views = await stats_items[0].inner_text() if len(stats_items) > 0 else "未知播放"
-            danmaku = await stats_items[1].inner_text() if len(stats_items) > 1 else "未知弹幕"
+            # 4. 提取 YouTube 播放量和时间 (#metadata-line 里的 span)
+            metadata_spans = await card.locator("#metadata-line span").all()
+            views = await metadata_spans[0].inner_text() if len(metadata_spans) > 0 else "未知播放"
+            upload_date = await metadata_spans[1].inner_text() if len(metadata_spans) > 1 else "未知日期"
             
-            date_elem = card.locator(".bili-video-card__info--date")
-            upload_date = await date_elem.inner_text() if await date_elem.count() > 0 else "未知日期"
-            
-            # 拼接到汇总字符串中，喂给 DeepSeek
             scraped_data += f"[{i+1}] 标题：{title}\n"
-            scraped_data += f"    🔥 热度：{views}播放 / {danmaku}弹幕 / 发布于{upload_date}\n"
+            scraped_data += f"    🔥 热度：{views} / 发布于：{upload_date}\n"
             scraped_data += f"    🔗 链接：{link}\n\n"
 
         await browser.close()
-        print("✅ 深度抓取完成！数据已入库。")
+        print("✅ YouTube 深度抓取完成！数据已入库。")
 
-        # --- 2. 大脑分析阶段 (DeepSeek 提示词升级) ---
-        print("🧠 [第二阶段] DeepSeek 正在进行多维度数据拆解...")
+        # --- 2. 大脑分析阶段 (DeepSeek) ---
+        print("🧠 [第二阶段] DeepSeek 正在进行跨文化数据拆解...")
         api_key = os.environ.get('DEEPSEEK_API_KEY')
         if not api_key: return
 
         api_url = "https://api.deepseek.com/v1/chat/completions"
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
         
-        # 升级 Prompt：让 AI 结合“播放量”和“日期”来分析
+        # 5. 提示词全面修改为 YouTube 语境
         prompt = f"""
-        你是一个资深的视频内容产品经理。我从 B 站抓取了关于“{keyword}”的 5 条最新爆款数据。
+        你是一个拥有国际视野的视频内容分析师。我刚刚从 YouTube 抓取了关于“{keyword}”的 5 条最新全球爆款视频。
         
         原始抓取数据如下：
         {scraped_data}
 
         请根据这些数据完成以下分析：
-        1. 【流量含金量】：结合播放量和发布日期，判断哪个视频是真正的“黑马”（比如发布时间短但播放量飙升）。
-        2. 【内容风向标】：分析目前该领域最吸睛的关键词和封面策略是什么？
-        3. 【痛点洞察】：基于这些爆款，分析用户现在的焦虑点或兴趣点在哪里？
-        4. 附上这 5 个视频的完整清单（⚠️要求：必须原封不动地输出每个视频的完整网页链接和播放量，方便我直接点击观看！）。
+        1. 【全球流量风向】：结合播放量和发布日期，判断该话题在国际上的热度趋势。
+        2. 【内容切入点】：分析这些高播放视频是通过什么角度切入的（如硬核评测、教程、娱乐化表达等）？
+        3. 附上这 5 个视频的完整清单（⚠️要求：必须原封不动地输出每个视频的完整网页链接和播放量，方便我直接点击观看！）。
         """
 
         payload = {
@@ -94,11 +90,11 @@ async def scrape_and_analyze(keyword):
             email_to = os.environ.get('EMAIL_TO')
             
             if email_user and email_pass and email_to:
-                # 依然使用 Gmail 配置，端口 465
                 yag = yagmail.SMTP(user=email_user, password=email_pass, host='smtp.gmail.com', port=465)
+                # 6. 邮件标题修改
                 yag.send(
                     to=email_to,
-                    subject=f"📊 深度洞察：B站【{keyword}】流量价值简报",
+                    subject=f"🌐 国际视野：YouTube【{keyword}】热度洞察简报",
                     contents=[summary]
                 )
                 print("✅ 报告已送达您的邮箱！")
@@ -107,4 +103,5 @@ async def scrape_and_analyze(keyword):
             print(f"❌ 运行失败: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(scrape_and_analyze("大疆眼镜和穿越遥杆"))
+    # 可以在这里换成英文关键词测试效果更好，比如 "AI Agent" 或 "DJI drone"
+    asyncio.run(scrape_and_analyze("大疆无人机"))
