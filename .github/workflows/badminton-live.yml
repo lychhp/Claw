@@ -2,9 +2,9 @@ name: Badminton Live Alert
 
 on:
   schedule:
-    # 每天北京时间 10:00 - 23:00,每 2 小时检查一次
-    - cron: '0 2-15/2 * * *'
-  workflow_dispatch: # 允许手动点击运行
+    # 每周一北京时间早上 8:15 运行 (UTC 00:15)
+    - cron: '15 0 * * 1'
+  workflow_dispatch: # 依然保留手动触发
 
 jobs:
   check-and-send:
